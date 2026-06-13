@@ -1,5 +1,9 @@
 import json
 from pathlib import Path
+from typing import Dict
+
+from blob import Blob
+from git_object import GitObject
 
 
 class Repository:
@@ -14,7 +18,7 @@ class Repository:
         
     
     def init(self)->bool:
-        if(self.gitpy_dir.exists()):
+        if self.gitpy_dir.exists():
             print(f"GitPy repository already exists at {self.gitpy_dir}")
             return False
         
@@ -24,10 +28,74 @@ class Repository:
         self.heads_dir.mkdir()
         
         self.head_file.write_text("ref: refs/heads/master\n")
-        self.index_file.write_text(json.dumps({},indent=2))
+        self.save_index({})
         
         print(f"Initialized empty GitPy repository in {self.gitpy_dir}")
         return True
+    
+    def add_path(self,path:str)->None:
+        full_path=self.path / path
+        
+        if not full_path.exists:
+            raise FileNotFoundError(f'Path {path} not found.')
+        
+        if full_path.is_file():
+            self.add_file(path)
+        elif full_path.is_dir():
+            self.add_directory(path)
+        else:
+            raise ValueError(f'{path} is neither a directory nor a file.')
+        
+    def add_file(self, path:str):
+        full_path=self.path / path
+        if not full_path.exists():
+            raise FileNotFoundError(f'Path {path} not found.')
+            return
+        
+        # Read the file content
+        content =full_path.read_bytes()
+        
+        # create BLOB object form content
+        blob=Blob(content)
+        
+        # Store the BLOB object in database (./git objects)
+        blob_hash=self.store_object(blob)
+        
+        # update index to include the file
+        index=self.load_index()
+        index[path]=blob_hash
+        self.save_index(index)
+        
+        print(f'Added {path} ')
+        
+        
+    def store_object(self, obj:GitObject)->str:
+        obj_hash=obj.hash()
+        obj_dir=self.objects_dir / obj_hash[:2]
+        obj_file=obj_dir/obj_hash[2:]
+        
+        if not obj_file.exists():
+            obj_dir.mkdir(exist_ok=True)
+            obj_file.write_bytes(obj.serialize())
+            
+        return obj_hash
+    
+    def load_index(self)->Dict[str,str]:
+        if not self.index_file.exists():
+            return {}
+        try:
+            return json.loads(self.index_file.read_text())
+        except:
+            return {}
+        
+    def save_index(self,index: Dict[str,str]):
+        self.index_file.write_text(json.dumps(index,indent=2))
+        
+    def add_directory(self):
+        pass
+        
+        
+        
         
         
         
