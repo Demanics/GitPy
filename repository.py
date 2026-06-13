@@ -91,12 +91,25 @@ class Repository:
     def save_index(self,index: Dict[str,str]):
         self.index_file.write_text(json.dumps(index,indent=2))
         
-    def add_directory(self):
-        pass
-        
-        
-        
-        
-        
-        
-        
+    def add_directory(self,path:str):
+        full_path=self.path / path
+        if not full_path.exists():
+            raise FileNotFoundError(f'Directory {path} not found.')
+            return
+        if not full_path.is_dir():
+            raise ValueError(f'{path} not a directory.')
+        count=0
+        # recursively traverse the directory
+        for file_path in full_path.rglob("*"):
+            if file_path.is_file():
+                if any(ignored in file_path.parts for ignored in ['.gitpy', '__pycache__']):
+                    continue
+                
+                relative_path = str(file_path.relative_to(self.path))
+                self.add_file(relative_path)
+                count+=1
+                
+        if count==0:
+            print(f'Directory {path} is already upto date.')
+        else:
+            print(f'Added {count} files from directory "{path}".')
