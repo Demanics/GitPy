@@ -38,6 +38,11 @@ def main():
         help='Commit message.',
         required=True
         )
+    commit_parser.add_argument(
+        '--author',
+        help='Author name and email.',
+        )
+    
     checkout_parser=subparsers.add_parser(
         'checkout',
         help='Switch to another branch in GitPy repository.'
@@ -52,12 +57,22 @@ def main():
         action='store_true',
         help='Add a new branch.',
         )
-
-    commit_parser.add_argument(
-        '--author',
-        help='Author name and email.',
-        )
     
+    branch_parser = subparsers.add_parser(
+        'branch',
+        help='List and manage the branches.'
+        )
+    branch_parser.add_argument(
+        '-d',
+        '--delete',
+        action='store_true',
+        help='Delete a branch.',
+        )
+    branch_parser.add_argument(
+        'name',
+        nargs='?',
+        help='Branch name to create or delete.'
+        )   
     
 
     args = parser.parse_args()
@@ -90,6 +105,11 @@ def main():
                 print(f"GitPy repository does not exist at {repository.gitpy_dir}")
                 return
             repository.checkout(args.branch,args.create_branch)
+        elif args.command == 'branch':
+            if not repository.gitpy_dir.exists():
+                print(f"GitPy repository does not exist at {repository.gitpy_dir}")
+                return
+            repository.branch(args.name, args.delete)
 
     except Exception as e:
         print(f"Error: {e}")

@@ -313,4 +313,49 @@ class Repository:
             elif mode.startswith('400'):
                 file_path.mkdir(exist_ok=True)
                 self.restore_tree(obj_hash, file_path, index_out, f'{full_name}/')
+                
+    def branch(self, branch_name: str = None, delete: bool = False):
+        if delete:
+            if not branch_name:
+                print('Branch name required to delete a branch.')
+                return
  
+            current_branch = self.get_current_branch()
+            if branch_name == current_branch:
+                print(f'Cannot delete the currently checked out branch {branch_name}.')
+                return
+ 
+            branch_file = self.heads_dir / branch_name
+            if branch_file.exists():
+                branch_file.unlink()
+                print(f'Deleted the branch {branch_name}.')
+            else:
+                print(f'Branch {branch_name} not found.')
+            return
+ 
+        if branch_name:
+            branch_file = self.heads_dir / branch_name
+            if branch_file.exists():
+                print(f'Branch {branch_name} already exists.')
+                return
+ 
+            current_branch = self.get_current_branch()
+            current_commit = self.get_branch_commit(current_branch)
+            if current_commit:
+                self.set_branch_commit(branch_name, current_commit)
+                print(f'Created a new branch {branch_name}.')
+            else:
+                print('Make a new commit before creating a new branch.')
+            return
+ 
+        current_branch = self.get_current_branch()
+        branches = []
+        for branch_file in self.heads_dir.iterdir():
+            if branch_file.is_file():
+                branches.append(branch_file.name)
+ 
+        for branch_item in sorted(branches):
+            if branch_item == current_branch:
+                print(f'* {branch_item}')
+            else:
+                print(f'  {branch_item}')
