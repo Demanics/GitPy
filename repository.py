@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 from blob import Blob
 from commit import Commit
@@ -220,3 +220,97 @@ class Repository:
             raise FileNotFoundError(f'Object {obj_hash} not found.')
 
         return GitObject.deserialize(obj_file.read_bytes())
+    
+    def checkout(self, branch: str, create_branch: bool):
+        previous_branch = self.get_current_branch()
+        files_to_clear = set()
+        previous_commit_hash = None
+        try:
+            previous_commit_hash = self.get_branch_commit(previous_branch)
+            if previous_commit_hash:
+                previous_commit_object = self.load_object(previous_commit_hash)
+                previous_commit = Commit.from_content(previous_commit_object.content)
+                if previous_commit.tree_hash:
+                    files_to_clear = self.get_files_from_tree_recursive(previous_commit.tree_hash)
+        except Exception:
+            files_to_clear = set()
+ 
+        branch_file = self.heads_dir / branch
+ 
+        if not branch_file.exists():
+            if create_branch:
+                if previous_commit_hash:
+                    self.set_branch_commit(branch, previous_commit_hash)
+                    print(f'Created a new branch {branch}.')
+                else:
+                    print('Make a new commit before switching to a new branch.')
+                    return
+            else:
+                print(f'Branch {branch} not found.')
+                print(f"Use 'checkout -b {branch}' to create and switch to a new branch.")
+                return
+ 
+        self.head_file.write_text(f'ref: refs/heads/{branch}\n')
+        self.restore_working_directory(branch, files_to_clear)
+        print(f'Switched to branch {branch}.')
+ 
+    def get_files_from_tree_recursive(self, tree_hash: str, prefix: str = ''):
+        files = set()
+        try:
+            tree_obj = self.load_object(tree_hash)
+            tree = Tree.from_content(tree_obj.content)
+            for mode, name, obj_hash in tree.entries:
+                full_name = f'{prefix}{name}'
+                if mode.startswith('100'):
+                    files.add(full_name)
+                elif mode.startswith('400'):
+                    subtree_files = self.get_files_from_tree_recursive(obj_hash, f'{full_name}/')
+                    files.update(subtree_files)
+ 
+        except Exception as e:
+            print(f'Warning: Could not read tree {tree_hash}: {e}')
+ 
+        return files
+ 
+    def restore_working_directory(self, branch: str, files_to_clear: set):
+        target_commit_hash = self.get_branch_commit(branch)
+        if not target_commit_hash:
+            return
+ 
+        for rel_path in sorted(files_to_clear):
+            file_path = self.path / rel_path
+            try:
+                if file_path.is_file():
+                    file_path.unlink() 
+                elif file_path.is_dir():
+                    if not any(file_path.iterdir()):
+                        file_path.rmdir()
+                         
+            except Exception:
+                pass
+ 
+        target_commit_obj = self.load_object(target_commit_hash)
+        target_commit = Commit.from_content(target_commit_obj.content)
+ 
+        new_index = {}
+        if target_commit.tree_hash:
+            self.restore_tree(target_commit.tree_hash, self.path, new_index)
+            # note to the user if work is not commited
+ 
+        self.save_index(new_index)
+ 
+    def restore_tree(self, tree_hash: str, path: Path, index_out: Dict[str, str] = None, prefix: str = ''):
+        tree_obj = self.load_object(tree_hash)
+        tree = Tree.from_content(tree_obj.content)
+        for mode, name, obj_hash in tree.entries:
+            file_path = path / name
+            full_name = f'{prefix}{name}'
+            if mode.startswith('100'):
+                blob_obj = self.load_object(obj_hash)
+                file_path.write_bytes(blob_obj.content)
+                if index_out is not None:
+                    index_out[full_name] = obj_hash
+            elif mode.startswith('400'):
+                file_path.mkdir(exist_ok=True)
+                self.restore_tree(obj_hash, file_path, index_out, f'{full_name}/')
+ 
