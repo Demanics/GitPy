@@ -18,10 +18,10 @@ class GitObject:
         return zlib.compress(header + self.content)
 
     @classmethod
-    def deserialize(cls, data: bytes) -> 'GitObject':
+    def deserialize(cls, data: bytes) -> "GitObject":
         decompressed = zlib.decompress(data)
-        null_idx = decompressed.find(b'\0')
+        null_idx = decompressed.find(b"\0")
         header = decompressed[:null_idx]
-        content = decompressed[null_idx + 1:]
+        content = decompressed[null_idx + 1 :]
         obj_type, _ = header.split(b" ")
         return cls(obj_type.decode(), content)

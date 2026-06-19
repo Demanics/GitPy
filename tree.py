@@ -7,7 +7,7 @@ class Tree(GitObject):
     def __init__(self, entries: List[Tuple[str, str, str]] = None):
         self.entries = entries or []
         content = self._serialize_entries()
-        super().__init__('tree', content)
+        super().__init__("tree", content)
 
     def _serialize_entries(self) -> bytes:
         # <mode> <name>\0<hash>
@@ -19,17 +19,17 @@ class Tree(GitObject):
         return content
 
     @classmethod
-    def from_content(cls, content: bytes) -> 'Tree':
+    def from_content(cls, content: bytes) -> "Tree":
         tree = cls()
         i = 0
         while i < len(content):
-            null_idx = content.find(b'\0', i)
+            null_idx = content.find(b"\0", i)
             if null_idx == -1:
                 break
 
             mode_name = content[i:null_idx].decode()
-            mode, name = mode_name.split(' ', 1)
-            obj_hash = content[null_idx + 1: null_idx + 21].hex()
+            mode, name = mode_name.split(" ", 1)
+            obj_hash = content[null_idx + 1 : null_idx + 21].hex()
             tree.entries.append((mode, name, obj_hash))
 
             i = null_idx + 21
