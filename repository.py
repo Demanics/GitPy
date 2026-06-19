@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import time
 from typing import Dict, Optional
 
 from blob import Blob
@@ -359,3 +360,26 @@ class Repository:
                 print(f'* {branch_item}')
             else:
                 print(f'  {branch_item}')
+                
+    def log(self, max_count: int = 10):
+        current_branch = self.get_current_branch()
+        current_commit = self.get_branch_commit(current_branch)
+ 
+        if not current_commit:
+            print('No commits yet.')
+            return
+ 
+        count = 0
+        while current_commit and count < max_count:
+            commit_obj = self.load_object(current_commit)
+            commit = Commit.from_content(commit_obj.content)
+            print(f'commit: {current_commit}')
+            print(f'author: {commit.author}')
+            print(f'timestamp: {time.ctime(commit.timestamp)}')
+            print(f'\n    {commit.message}\n')
+ 
+            current_commit = commit.parent_hashes[0] if commit.parent_hashes else None
+            count += 1
+ 
+        if current_commit and count >= max_count:
+            print(f'(showing last {max_count} commits, use --max-count to see more)')

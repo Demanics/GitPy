@@ -74,6 +74,24 @@ def main():
         help='Branch name to create or delete.'
         )   
     
+    log_parser = subparsers.add_parser(
+        'log',
+        help='Show commit history.'
+        )
+    log_parser.add_argument(
+        '-n',
+        '--max-count',
+        type=int,
+        default=10,
+        help='Maximum number of commits to show.'
+    )
+    
+    status_parser = subparsers.add_parser(
+        'status',
+        help='Show status of the repository.'
+        )
+    
+    
 
     args = parser.parse_args()
 
@@ -110,6 +128,17 @@ def main():
                 print(f"GitPy repository does not exist at {repository.gitpy_dir}")
                 return
             repository.branch(args.name, args.delete)
+        elif args.command == 'log':
+            if not repository.gitpy_dir.exists():
+                print(f"GitPy repository does not exist at {repository.gitpy_dir}")
+                return
+            repository.log(args.max_count)
+        elif args.command == 'status':
+            if not repository.gitpy_dir.exists():
+                print(f"GitPy repository does not exist at {repository.gitpy_dir}")
+                return
+            repository.status()
+
 
     except Exception as e:
         print(f"Error: {e}")
