@@ -244,20 +244,10 @@ MIT License
 
 ## Author
 
-Built by Muhammad Ali and contributors.
+Built by Muhammad Ali.
 
 GitHub:
 
 https://github.com/Demanics
-
----
-
-## Inspiration
-
-Inspired by:
-
-- :contentReference[oaicite:1]{index=1}  
-- :contentReference[oaicite:2]{index=2}  
-- :contentReference[oaicite:3]{index=3}  
 
 ---
